@@ -1,0 +1,169 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+Importação de bibliotecas
+```{r}
+library(tidyverse)
+library(ggplot2)
+theme_set(theme_bw())
+```
+
+```{r}
+setwd("/home/johannyls/workspace/metodologia/reclamacoes-do-gf/")
+```
+
+```{r}
+avaliacoes <- read_csv("data/3-avaliacao-humana/avaliacoes-20180610.csv")
+reclamacoes <-  read_csv("data/1-reclamacoes-selecionadas/reclamacoes-avaliadas.csv")
+```
+
+#inserindo colunas comprimento da reclamacao e do titulo
+```{r}
+reclamacoes <- reclamacoes %>% mutate(reclamacao.length = str_length(reclamacao),
+                                      titulo.length = str_length(titulo))
+```
+
+# insere coluna com número de letras em capslock
+```{r}
+reclamacoes$numero.de.capslock <- str_count(reclamacoes$reclamacao, "\\b[A-Z]{2,}\\b")
+```
+
+#qual o formato das distribuições dos tamanhos dos títulos e das reclamações por órgão
+```{r}
+reclamacoes %>% 
+  filter(complete.cases(.)) %>% 
+  ggplot(aes(fill = orgao, x = titulo.length), na.rm = TRUE) + 
+  geom_histogram(binwidth = 2, na.rm = TRUE) + 
+  facet_grid(orgao ~ .)
+
+reclamacoes %>% 
+  filter(complete.cases(.)) %>% 
+  ggplot(aes(fill = orgao, x = reclamacao.length), na.rm = TRUE) + 
+  geom_histogram(binwidth = 50, na.rm = TRUE) + 
+  facet_grid(orgao ~ .)
+```
+
+```{r}
+#Percebemos que as reclamações do INSS são em média menores do que as reclamações da anac
+avaliacoes <- avaliacoes %>% 
+              select(avaliador = `Matricula`, 
+                      id = `ID da reclamação`, 
+                       insatisfacao = `Grau de insatisfação`)
+```
+
+#Alguma avaliação foge dos valores de 1 a 5?
+```{r}
+avaliacoes %>% 
+  filter((id %in% 1:5 ))
+```
+
+#quantas avaliações foram feitas por reclamação?
+```{r}
+avaliacoes %>% 
+  group_by(id) %>% 
+  count() %>% 
+  ggplot(aes("reclamacoes", n)) + 
+  geom_jitter(width = .05, alpha = .7)
+```
+
+# em média, quantas avaliações por reclamação?
+```{r}
+avaliacoes %>% 
+  group_by(id) %>% 
+  count() %>%
+  ungroup() %>% 
+  summarise(media = mean(n), 
+            mediana = median(n))
+```
+
+#mostra número de revisores por reclamação
+```{r}
+avaliacoes %>% group_by(id) %>% 
+  summarize(count=n()) %>% 
+  ggplot(aes(x=reorder(id, count), y=count)) + geom_bar(stat = "identity")
+```
+
+```{r}
+# Será que há consenso entre as avaliações de cada reclamação?
+#  níveis de discordância X id da reclamação
+avaliacoes %>% group_by(id) %>% 
+  summarise(range = max(insatisfacao) - min(insatisfacao),
+            mediana = median(insatisfacao)) %>% 
+  ggplot(aes(x=id, y=range, colour = id)) + geom_point() +
+  geom_jitter(height = 0.05, alpha = .4)
+```
+
+```{r}
+# vemos que para algums reclamações houve uma discordância de até 3 níveis de insatisfação
+# níveis de discordância X nível médio de insatisfação
+# não parece haver relação entre essas variáveis
+avaliacoes %>% group_by(id) %>% 
+  summarise(range = max(insatisfacao) - min(insatisfacao),
+            mediana = median(insatisfacao)) %>% 
+  ggplot(aes(x=mediana, y=range)) + geom_point() +
+  geom_jitter(height = 0.05, alpha = .4)
+```
+
+```{r}
+# a maioria das avaliações tem nível de discordância de 1 e 2
+avaliacoes %>% group_by(id) %>% 
+  summarise(range = max(insatisfacao) - min(insatisfacao),
+            mediana = median(insatisfacao)) %>% 
+  group_by(range) %>% count()
+```
+
+```{r}
+# quantas reclamações tem discordância maior que 2?
+avaliacoes %>% group_by(id) %>% 
+  summarise(range = max(insatisfacao) - min(insatisfacao)) %>% 
+  filter(range > 2) %>% count()
+```
+
+```{r}
+# que reclamações são essas?
+avaliacoes %>% group_by(id) %>% 
+  summarise(range = max(insatisfacao) - min(insatisfacao)) %>% 
+  filter(range > 2) %>% inner_join(reclamacoes, by = "id") %>% View()
+```
+
+```{r}
+
+avaliacoes %>% group_by(id) %>% 
+  summarise(range = max(insatisfacao) - min(insatisfacao)) %>% 
+  filter(range > 2) %>% inner_join(reclamacoes, by = "id") %>% 
+  ggplot(aes(fill = orgao, x = reclamacao.length), na.rm = TRUE) + 
+  geom_histogram(binwidth = 60, na.rm = TRUE) + 
+  facet_grid(orgao ~ .)
+# o que fazer com essas reclamações?
+```
+
+```{r}
+# Já vimos que as reclamações da ANAC são maiores. Outra forma de ver é através de boxplots
+reclamacoes %>% group_by(orgao) %>% 
+  ggplot(aes(x=reorder(orgao, reclamacao.length), y=reclamacao.length)) + geom_boxplot()
+```
+
+```{r}
+## Será que os tamanhos das reclamações ou títulos tem alguma relação com o nível de insatisfação?
+reclamacoes %>% ggplot(aes(x=mediana, y=reclamacao.length)) + geom_point()
+reclamacoes %>% ggplot(aes(x=mediana, y=numero.de.capslock)) + geom_point()
+reclamacoes %>% ggplot(aes(x=mediana, y=titulo.length)) + geom_point()
+```
+
+```{r}
+# Olhando as variáveis não encontramos relações fortes entre elas
+library(GGally)
+reclamacoes %>% 
+  select(orgao, titulo.length, reclamacao.length, numero.de.capslock, mediana) %>% 
+  ggpairs()
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
