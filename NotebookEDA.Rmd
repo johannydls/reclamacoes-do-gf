@@ -112,6 +112,15 @@ avaliacoes %>%
             mediana = median(n))
 ```
 
+### Número de revisores por reclamação
+Aqui podemos ter uma visão geral do número de avaliações realizadas por reclamação. Temos o ID da reclamação em função do número de avaliações realizadas na reclamação.
+```{r}
+avaliacoes %>% group_by(id) %>% 
+  summarize(count=n()) %>% 
+  ggplot(aes(x=reorder(id, count), y=count)) + geom_bar(stat = "identity")
+```
+
+
 ------------------------------------------------------------------------------------------------------
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
 
