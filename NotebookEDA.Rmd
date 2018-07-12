@@ -1,0 +1,121 @@
+---
+title: "Análise Exploratória dos Dados"
+output: html_notebook
+---
+### Componentes do grupo
+* Johanny Santos
+* Henrique Benedito
+* Matheus Benedito
+* Natan Ribeiro
+* Saulo Nascimento
+<p>
+
+### Carregando bibliotecas necessárias para a análise exploratória dos dados
+Inicialmente, precisamos carregar as bibliotecas que iremos utilizar durante toda a análise exploratória dos dados.
+```{r}
+library(tidyverse)
+library(ggplot2)
+theme_set(theme_bw())
+```
+
+### Definindo o local de trabalho
+A pasta base que vamos trabalhar é o repositório baixado do [github](https://github.com/nazareno/reclamacoes-do-gf) do professor Nazareno, da disciplina 'Metodologia Científica'.
+```{r}
+setwd("~/workspace/metodologia/reclamacoes-do-gf")
+```
+
+### Definindo tabelas que vamos analisar
+* **avaliacoes** -> Avaliações humanas <p>
+* **reclamacoes** -> Reclamações avaliadas
+```{r}
+avaliacoes <- read_csv("data/3-avaliacao-humana/avaliacoes-20180610.csv")
+reclamacoes <- read_csv("data/1-reclamacoes-selecionadas/reclamacoes-avaliadas.csv")
+```
+
+### Renomeando colunas da tabela 'avaliacoes' para melhor visualização
+* A coluna 'Matricula' passa a ser 'avaliador';
+* A coluna 'ID da reclamação' passa a ser 'id';
+* A coluna 'Grau de insatisfação' passa a ser 'insatisfacao';
+```{r}
+avaliacoes <- avaliacoes %>% 
+              select(avaliador = `Matricula`, 
+                      id = `ID da reclamação`, 
+                       insatisfacao = `Grau de insatisfação`)
+```
+
+### Inserindo colunas na tabela **reclamacoes**
+Diante dos dados coletados, se faz necessário a inclusão de mais duas colunas na tabela 'reclamacoes', a saber **comprimento da reclamação**, **comprimento do título** e **número de de letras em capslock**. Essa informação é necessária para podermos analisar se o tamanho da reclamação ou do título ou até mesmo o número de letras com capslocks contribui para o aumento ou diminuição do nível de insatisfação do cliente.
+```{r}
+reclamacoes <- reclamacoes %>% mutate(reclamacao.length = str_length(reclamacao),
+                                      titulo.length = str_length(titulo),
+                                      numero.de.capslock = str_count(reclamacoes$reclamacao, "\\b[A-Z]{2,}\\b"))
+```
+
+
+### Formato das distribuições dos tamanhos dos títulos e das reclamações
+Gráficos de distribuições gerados para o tamanho dos títulos e das reclamações, filtrando-os por órgão (reclamações da ANAC e reclamações do INSS)
+```{r}
+reclamacoes %>% 
+  filter(complete.cases(.)) %>% 
+  ggplot(aes(fill = orgao, x = titulo.length), na.rm = TRUE) + 
+  geom_histogram(binwidth = 2, na.rm = TRUE) + 
+  facet_grid(orgao ~ .)
+
+reclamacoes %>% 
+  filter(complete.cases(.)) %>% 
+  ggplot(aes(fill = orgao, x = reclamacao.length), na.rm = TRUE) + 
+  geom_histogram(binwidth = 50, na.rm = TRUE) + 
+  facet_grid(orgao ~ .)
+
+reclamacoes %>% 
+  filter(complete.cases(.)) %>% 
+  ggplot(aes(fill = orgao, x = numero.de.capslock), na.rm = TRUE) + 
+  geom_histogram(binwidth = 50, na.rm = TRUE) + 
+  facet_grid(orgao ~ .)
+```
+
+### Análise das reclamações em cada órgão
+De acordo com os gráficos gerados acima, podemos ver que as reclamações do INSS são, em média, menores do que as reclamações da ANAC. Além disso, as reclamações da ANAC possuem um pouco mais de letras com CAPSLOCK com relação às reclamações do INSS.
+
+<p>
+## *Será que podemos confiar em nossas avaliações humanas?*
+</p>
+### Verificando se alguma avaliação foge do intervalo de valores de 1 a 5
+Antes de realizar análises, é preciso verificar se a faixa de valores das avaliações humanas realizadas estão dentro do intervalo pré-definido, onde 1 significa pouco insatisfeito e 5 significa muito insatisfeito.<p>
+<p></p>
+Como podemos ver na tabela gerada abaixo, todas as avaliações realizadas estão dentro do intervalo pré-definido.
+```{r}
+avaliacoes %>% 
+  filter((insatisfacao %in% 1:5 ))
+```
+
+### Número de avaliações realizadas por reclamação
+Como podemos ver pelo gráfico gerado abaixo, a maioria das reclamações possuem, aproximadamente, 5 avaliações realizadas por reclamação. Poucas reclamações receberam, aproximadamente, 3 avaliações. <p>
+No experimento, cada avaliador deveria avaliar 10 reclamações, mas não seriam as mesmas reclamações. Por isso, essa divergência entre o número de avaliações por reclamações.
+```{r}
+avaliacoes %>% 
+  group_by(id) %>% 
+  count() %>% 
+  ggplot(aes("reclamacoes", n)) + 
+  geom_jitter(width = .05, alpha = .7)
+```
+
+### Número médio de avaliações por reclamação
+Confirmando os dados visto no gráfico gerado acima, em média, as reclamações receberam 5 avaliações dos avaliadores. No cálculo, obtivemos uma média de **5.316667** avaliações por reclamação.
+
+```{r}
+avaliacoes %>% 
+  group_by(id) %>% 
+  count() %>%
+  ungroup() %>% 
+  summarise(media = mean(n), 
+            mediana = median(n))
+```
+
+------------------------------------------------------------------------------------------------------
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
