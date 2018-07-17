@@ -120,11 +120,78 @@ avaliacoes %>% group_by(id) %>%
   ggplot(aes(x=reorder(id, count), y=count)) + geom_bar(stat = "identity")
 ```
 
+### Níveis de discordância X ID da Reclamação
+Como podemos analisar no gráfico abaixo, algumas reclamações tiveram uma discordância de até 3 níveis de insatisfação, e a maioria tiveram discordância entre 1 e 2 níveis e poucas não tiveram discordância entre os avaliadores.
+```{r}
+avaliacoes %>% group_by(id) %>% 
+  summarise(range = max(insatisfacao) - min(insatisfacao),
+            mediana = median(insatisfacao)) %>% 
+  ggplot(aes(x=id, y=range, colour = id)) + geom_point() +
+  geom_jitter(height = 0.05, alpha = .4)
+```
+
+#### Como foi visto no gráfico anterior, confirmamos na tabela abaixo que a maioria das avaliações tiveram nível de discordância de 1 (21) e 2 (22), e apenas 13 tiveram discordância maior que 2.
+```{r}
+avaliacoes %>% group_by(id) %>% 
+  summarise(range = max(insatisfacao) - min(insatisfacao),
+            mediana = median(insatisfacao)) %>% 
+  group_by(range) %>% count()
+```
+
+### Níveis de Discordância X Nível Médio de Insatisfação 
+De acordo com o gráfico gerado abaixo, não parece haver relação entre as variáveis nível de discordância e nível médio de insatisfação.
+```{r}
+avaliacoes %>% group_by(id) %>% 
+  summarise(range = max(insatisfacao) - min(insatisfacao),
+            mediana = median(insatisfacao)) %>% 
+  ggplot(aes(x=mediana, y=range)) + geom_point() +
+  geom_jitter(height = 0.05, alpha = .4)
+```
+
+### Lista de reclamações com discordância maior que 2
+```{r}
+avaliacoes %>% group_by(id) %>% 
+  summarise(range = max(insatisfacao) - min(insatisfacao)) %>% 
+  filter(range > 2) %>% inner_join(reclamacoes, by = "id") %>% View()
+```
+
+### Removendo as reclamações com discordância maior que 2
+```{r}
+avaliacoes_filtradas = avaliacoes %>% group_by(id) %>% 
+  summarise(range = max(insatisfacao) - min(insatisfacao)) %>% 
+  filter(range < 3) %>% inner_join(reclamacoes, by = "id")
+```
+
+```{r}
+avaliacoes_filtradas %>% 
+  ggplot(aes(fill = orgao, x = reclamacao.length), na.rm = TRUE) + 
+  geom_histogram(binwidth = 60, na.rm = TRUE) + 
+  facet_grid(orgao ~ .)
+```
+
+### Tamanho das reclamações em Boxplots
+```{r}
+reclamacoes %>% group_by(orgao) %>% 
+  ggplot(aes(x=reorder(orgao, reclamacao.length), y=reclamacao.length)) + geom_boxplot()
+```
+
+```{r}
+## Será que os tamanhos das reclamações ou títulos tem alguma relação com o nível de insatisfação?
+reclamacoes %>% ggplot(aes(x=mediana, y=reclamacao.length)) + geom_point()
+reclamacoes %>% ggplot(aes(x=mediana, y=numero.de.capslock)) + geom_point()
+reclamacoes %>% ggplot(aes(x=mediana, y=titulo.length)) + geom_point()
+```
+
+### Verificando relações entre as variáveis
+Como podemos ver com os gráficos gerados abaixo, o coeficiente de correlação entre elas são baixos, assim, não encontramos relações fortes entre as variáveis.
+
+```{r}
+# Olhando as variáveis não encontramos relações fortes entre elas
+library(GGally)
+reclamacoes %>% 
+  select(orgao, titulo.length, reclamacao.length, numero.de.capslock, mediana) %>% 
+  ggpairs()
+```
 
 ------------------------------------------------------------------------------------------------------
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
-
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
 
